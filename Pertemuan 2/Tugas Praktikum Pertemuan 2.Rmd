@@ -1,0 +1,162 @@
+---
+title: "Tugas 2 Praktikum MPDW"
+author: "NAILAH AFIA TSABITA"
+date: "2026-09-02"
+output: rmdformats::readthedown
+---
+
+# Nomor 1 
+
+## Impor Data
+```{r}
+library(readxl)
+
+data1 <- read_excel(
+  "C:/Users/Abit/Documents/KULIAH SMT 5/MPDW/Tugas Praktikum 2.xlsx",
+  sheet = "Sheet1"
+)
+
+head(data1)
+```
+## Pemodelan Regresi OLS
+```{r}
+data1$`Market share` <- as.numeric(data1$`Market share`)
+data1$Price <- as.numeric(data1$Price)
+
+# Regresi OLS
+model_ols <- lm(`Market share` ~ Price, data = data1)
+
+# Melihat hasil regresi
+summary(model_ols)
+```
+
+## Identifikasi Autokorelasi 
+
+### ACF dan PACF identifikasi autokorelasi
+```{r}
+sisaan_ols <- residuals(model_ols)
+par(mfrow = c(1,2))
+acf(sisaan_ols)
+pacf(sisaan_ols)
+```
+
+### Pemeriksaan dengan Durbin Test 
+```{r}
+library(lmtest)
+dw_ols <- dwtest(model_ols)
+dw_ols
+```
+Karena p-value (0,009813) < α (0,05), H0 ditolak, dan nilai DW = 1,1358 yang jauh di bawah 2 menunjukkan adanya autokorelasi positif pada sisaan model.
+
+## Penanganan Autokorelasi dengan Metode Cochrane-Orcutt
+
+```{r}
+library(orcutt)
+
+modelCO_ols <- cochrane.orcutt(model_ols)
+summary(modelCO_ols)
+```
+
+```{r}
+dw_olsCO <- dwtest(modelCO_ols)
+dw_olsCO
+```
+
+```{r}
+# Uji Durbin-Watson sesudah Orcutt
+dw_olsCO <- dwtest(modelCO_ols)
+
+# Membandingkan DW sebelum dan sesudah Cochrane-Orcutt
+dw_compare <- data.frame(
+  Model = c("Sebelum Orcutt", "Sesudah Orcutt"),
+  DW = c(dw_ols$statistic, dw_olsCO$statistic),
+  p_value = c(dw_ols$p.value, dw_olsCO$p.value)
+)
+dw_compare
+```
+Berdasarkan hasil uji Durbin-Watson, autokorelasi pada model telah berhasil ditangani. Sebelum koreksi, DW = 1,1358 dengan p-value = 0,0098 (< α = 0,05), menunjukkan adanya autokorelasi positif pada sisaan. Setelah dilakukan koreksi dengan metode Cochrane-Orcutt, DW meningkat menjadi 1,958 dengan p-value = 0,4151 (> α = 0,05), sehingga gagal tolak H0. Nilai DW yang mendekati 2 ini mengindikasikan bahwa autokorelasi pada model sudah tidak signifikan, artinya penanganan dengan Cochrane-Orcutt berhasil mengatasi masalah autokorelasi pada model regresi.
+
+
+
+# Nomor 2
+
+## Import Data
+```{r}
+library(readxl)
+
+data2 <- read_excel(
+  "C:/Users/Abit/Documents/KULIAH SMT 5/MPDW/Tugas Praktikum 2.xlsx",
+  sheet = "Sheet2"
+)
+
+head(data2)
+```
+
+## Pemodelan Regresi OLS
+```{r}
+# Regresi OLS
+model_ols2 <- lm(Sales ~ Advertising, data = data2)
+
+# Melihat hasil regresi
+summary(model_ols2)
+```
+## Identifikasi Autokorelasi 
+### ACF dan PACF identifikasi autokorelasi
+```{r}
+sisaan_ols2 <- residuals(model_ols2)
+
+par(mfrow = c(1,2))
+acf(sisaan_ols2, main = "ACF Sisaan")
+pacf(sisaan_ols2, main = "PACF Sisaan")
+```
+### Pemeriksaan dengan Durbin Test 
+```{r}
+dw_ols2 <- dwtest(model_ols2)
+dw_ols2
+```
+Nilai DW = 0,162  yang jauh di bawah 2 menunjukkan adanya autokorelasi positif pada sisaan model.
+
+## Penanganan Autokorelasi dengan Metode Cochrane-Orcutt
+
+```{r}
+library(orcutt)
+
+modelCO2_ols <- cochrane.orcutt(model_ols2)
+summary(modelCO2_ols)
+```
+
+```{r}
+dw_olsCO2 <- dwtest(modelCO2_ols)
+dw_olsCO2
+```
+```{r}
+# Uji Durbin-Watson sesudah Orcutt
+dw_olsCO2 <- dwtest(modelCO2_ols)
+
+# Membandingkan DW sebelum dan sesudah Cochrane-Orcutt
+dw_compare2 <- data.frame(
+  Model = c("Sebelum Orcutt", "Sesudah Orcutt"),
+  DW = c(dw_ols2$statistic, dw_olsCO2$statistic),
+  p_value = c(dw_ols2$p.value, dw_olsCO2$p.value)
+)
+dw_compare2
+```
+Berdasarkan hasil uji Durbin-Watson, autokorelasi pada model kedua ini juga telah berhasil ditangani. Sebelum koreksi, DW = 0,1620 dengan p-value = 8,94 × 10⁻²⁰ (< α = 0,05), menunjukkan adanya autokorelasi positif yang sangat kuat pada sisaan. Setelah dilakukan koreksi dengan metode Cochrane-Orcutt, DW meningkat menjadi 1,9393 dengan p-value = 0,3780 (> α = 0,05), sehingga gagal tolak H0. Nilai DW yang mendekati 2 ini mengindikasikan bahwa autokorelasi pada model sudah tidak signifikan, artinya penanganan dengan Cochrane-Orcutt berhasil mengatasi masalah autokorelasi pada model regresi ini.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
