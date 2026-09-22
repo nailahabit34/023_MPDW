@@ -1,0 +1,240 @@
+---
+title: "Praktikum 4 MPDW"
+author: "NAILAH AFIA TSABITA"
+date: "2026-09-22"
+output: html_document
+---
+
+# 1. Proses  MA(2)
+```{r}
+library(TSA) 
+```
+
+```{r}
+set.seed(123)
+n <- 300
+theta1 <- 0.4
+theta2 <- 0.6
+```
+
+## Bangkitkan Data MA(2)
+```{r}
+# Manual
+e <- rnorm(n + 2)
+y_manual <- numeric(n)
+for (t in 1:n) {
+  y_manual[t] <- e[t + 2] + theta1 * e[t + 1] + theta2 * e[t]
+}
+y_manual <- ts(y_manual)
+
+# Dengan arima.sim
+y_sim <- arima.sim(model = list(ma = c(theta1, theta2)), n = n)
+```
+
+## Plot time series, ACF, PACF, EACF
+```{r}
+par(mfrow = c(1, 2))
+plot.ts(y_manual, main = "Time Series MA(2) - Manual", ylab = "Yt")
+plot.ts(y_sim, main = "Time Series MA(2) - arima.sim", ylab = "Yt")
+
+par(mfrow = c(2, 2))
+acf(y_manual, main = "ACF - Manual")
+pacf(y_manual, main = "PACF - Manual")
+acf(y_sim, main = "ACF - arima.sim")
+pacf(y_sim, main = "PACF - arima.sim")
+```
+
+## Scatterplot Yt vs Yt-1, Yt-2, Yt-3
+```{r}
+par(mfrow = c(1, 3))
+plot(y_manual[1:(n - 1)], y_manual[2:n],
+     xlab = "Yt-1", ylab = "Yt", main = "Yt vs Yt-1")
+plot(y_manual[1:(n - 2)], y_manual[3:n],
+     xlab = "Yt-2", ylab = "Yt", main = "Yt vs Yt-2")
+plot(y_manual[1:(n - 3)], y_manual[4:n],
+     xlab = "Yt-3", ylab = "Yt", main = "Yt vs Yt-3")
+```
+
+##  Autokorelasi: data bangkitan vs teoritis
+```{r}
+acf_manual <- acf(y_manual, plot = FALSE)
+acf_sim    <- acf(y_sim, plot = FALSE)
+print(acf_manual$acf[2:4])
+print(acf_sim$acf[2:4])
+
+denom <- 1 + theta1^2 + theta2^2
+rho1_teori <- (theta1 + theta1 * theta2) / denom
+rho2_teori <- theta2 / denom
+rho3_teori <- 0
+
+cat("rho1 teoritis =", rho1_teori, "\n")
+cat("rho2 teoritis =", rho2_teori, "\n")
+cat("rho3 teoritis =", rho3_teori, "\n")
+```
+# 2. Proses AR(2)
+```{r}
+set.seed(123)
+n <- 300
+phi1 <- 0.5
+phi2 <- 0.2
+burn <- 100  # burn-in agar stabil
+```
+
+## Bangkitkan data AR(2)
+```{r}
+# Manual
+e <- rnorm(n + burn)
+y_full <- numeric(n + burn)
+y_full[1] <- e[1]
+y_full[2] <- e[2]
+for (t in 3:(n + burn)) {
+  y_full[t] <- phi1 * y_full[t - 1] + phi2 * y_full[t - 2] + e[t]
+}
+y_manual <- ts(y_full[(burn + 1):(n + burn)])
+
+# Dengan arima.sim
+y_sim <- arima.sim(model = list(ar = c(phi1, phi2)), n = n)
+```
+
+## Plot time series, ACF, PACF, EACF
+```{r}
+par(mfrow = c(1, 2))
+plot.ts(y_manual, main = "Time Series AR(2) - Manual", ylab = "Yt")
+plot.ts(y_sim, main = "Time Series AR(2) - arima.sim", ylab = "Yt")
+
+par(mfrow = c(2, 2))
+acf(y_manual, main = "ACF - Manual")
+pacf(y_manual, main = "PACF - Manual")
+acf(y_sim, main = "ACF - arima.sim")
+pacf(y_sim, main = "PACF - arima.sim")
+```
+
+
+```{r}
+library(TSA)
+eacf(y_manual)
+eacf(y_sim)
+```
+
+```{r}
+# cek stasioner via akar polinomial AR: 1 - phi1*B - phi2*B^2 = 0
+akar <- polyroot(c(1, -phi1, -phi2))
+print(Mod(akar))   # stasioner jika semua |akar| > 1
+```
+
+## Scatterplot Yt vs Yt-1, Yt-2, Yt-3
+```{r}
+par(mfrow = c(1, 3))
+plot(y_manual[1:(n - 1)], y_manual[2:n],
+     xlab = "Yt-1", ylab = "Yt", main = "Yt vs Yt-1")
+plot(y_manual[1:(n - 2)], y_manual[3:n],
+     xlab = "Yt-2", ylab = "Yt", main = "Yt vs Yt-2")
+plot(y_manual[1:(n - 3)], y_manual[4:n],
+     xlab = "Yt-3", ylab = "Yt", main = "Yt vs Yt-3")
+```
+
+## Autokorelasi: data bangkitan vs teoritis
+```{r}
+acf_manual <- acf(y_manual, plot = FALSE)
+acf_sim    <- acf(y_sim, plot = FALSE)
+print(acf_manual$acf[2:4])
+print(acf_sim$acf[2:4])
+```
+
+```{r}
+rho1_teori <- phi1 / (1 - phi2)
+rho2_teori <- phi1 * rho1_teori + phi2 * 1
+rho3_teori <- phi1 * rho2_teori + phi2 * rho1_teori
+
+cat("rho1 teoritis =", rho1_teori, "\n")
+cat("rho2 teoritis =", rho2_teori, "\n")
+cat("rho3 teoritis =", rho3_teori, "\n")
+```
+# 3. Proses ARMA(2,2)
+```{r}
+set.seed(123)
+n <- 300
+phi1 <- 0.5
+phi2 <- 0.2
+theta1 <- 0.4
+theta2 <- 0.6
+burn <- 100
+```
+
+## Bangkitkan data ARMA(2,2)
+```{r}
+# Manual
+e <- rnorm(n + burn)
+y_full <- numeric(n + burn)
+y_full[1] <- e[1]
+y_full[2] <- e[2]
+for (t in 3:(n + burn)) {
+  y_full[t] <- phi1 * y_full[t - 1] + phi2 * y_full[t - 2] +
+    e[t] + theta1 * e[t - 1] + theta2 * e[t - 2]
+}
+y_manual <- ts(y_full[(burn + 1):(n + burn)])
+
+# Dengan arima.sim
+y_sim <- arima.sim(model = list(ar = c(phi1, phi2), ma = c(theta1, theta2)), n = n)
+```
+
+## Plot time series, ACF, PACF, EACF
+```{r}
+par(mfrow = c(1, 2))
+plot.ts(y_manual, main = "Time Series ARMA(2,2) - Manual", ylab = "Yt")
+plot.ts(y_sim, main = "Time Series ARMA(2,2) - arima.sim", ylab = "Yt")
+
+par(mfrow = c(2, 2))
+acf(y_manual, main = "ACF - Manual")
+pacf(y_manual, main = "PACF - Manual")
+acf(y_sim, main = "ACF - arima.sim")
+pacf(y_sim, main = "PACF - arima.sim")
+
+library(TSA)
+eacf(y_manual)
+eacf(y_sim)
+
+# cek stasioner via akar polinomial AR: 1 - phi1*B - phi2*B^2 = 0
+akar <- polyroot(c(1, -phi1, -phi2))
+print(Mod(akar))   # stasioner jika semua |akar| > 1
+```
+## Scatterplot Yt vs Yt-1, Yt-2, Yt-3
+```{r}
+par(mfrow = c(1, 3))
+plot(y_manual[1:(n - 1)], y_manual[2:n],
+     xlab = "Yt-1", ylab = "Yt", main = "Yt vs Yt-1")
+plot(y_manual[1:(n - 2)], y_manual[3:n],
+     xlab = "Yt-2", ylab = "Yt", main = "Yt vs Yt-2")
+plot(y_manual[1:(n - 3)], y_manual[4:n],
+     xlab = "Yt-3", ylab = "Yt", main = "Yt vs Yt-3")
+```
+
+## Autokorelasi: data bangkitan vs teoritis
+```{r}
+acf_manual <- acf(y_manual, plot = FALSE)
+acf_sim    <- acf(y_sim, plot = FALSE)
+print(acf_manual$acf[2:4])
+print(acf_sim$acf[2:4])
+
+# Teoritis ARMA(2,2) - gunakan fungsi bawaan ARMAacf()
+acf_teori <- ARMAacf(ar = c(phi1, phi2), ma = c(theta1, theta2), lag.max = 3)
+print(acf_teori[2:4])   # rho1, rho2, rho3 teoritis
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
