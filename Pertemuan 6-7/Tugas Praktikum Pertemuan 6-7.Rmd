@@ -1,0 +1,125 @@
+---
+title: "Tugas Praktikum 6-7"
+author: "NAILAH AFIA TSABITA"
+date: "2026-10-01"
+output: html_document
+---
+# Library
+```{r}
+library(forecast)
+library(tseries)
+library(ggplot2)
+library(Metrics)
+library(readxl)
+library(TSA)
+```
+
+# Persiapan Data
+## Impor Data
+```{r}
+data <- read.csv("C:\\Users\\Abit\\Documents\\KULIAH SMT 5\\MPDW\\daily-min-temperatures(1).csv.xls")
+head(data) 
+```
+## Ubah ke Timeseries
+```{r}
+data$Date <- as.Date(data$Date)
+
+ts_data <- ts(data$Temp,
+              start = c(1981, 1),
+              frequency = 365)
+
+plot(ts_data)
+```
+## Bagi ke Train dan Test
+```{r}
+n <- length(ts_data)
+train_size <- floor(0.8*n)
+
+train <- window(ts_data,
+                end = time(ts_data)[train_size])
+
+test <- window(ts_data,
+               start = time(ts_data)[train_size + 1])
+
+length(train)
+```
+
+# Model ARIMA
+## Cek stasioner
+```{r}
+acf(train)
+```
+```{r}
+adf.test(train)
+```
+```{r}
+library(tseries)
+kpss.test(train)           # p < 0.05 -> tidak stasioner
+
+acf(train, lag.max = 800)  # lihat apakah ada gelombang tiap ~365 hari
+```
+KPSS tidak menemukan bukti ketidakstasioneran, jadi hasilnya searah dengan ADF. Hasil ini artinya data train sudah stasioner, tidak perlu dilakukan differencing.
+
+## Model ARIMA
+```{r}
+pacf(as.numeric(train), lag.max = 50)   # petunjuk p
+eacf(as.numeric(train))                 # petunjuk p dan q
+model_auto <- auto.arima(train, seasonal = FALSE)
+model_auto
+checkresiduals(model_auto)
+```
+## Kandidat Model 
+```{r}
+# Tanpa Fourier
+m1 <- Arima(train, order = c(1,0,2))
+m2 <- Arima(train, order = c(2,0,1))
+m3 <- Arima(train, order = c(2,0,2))
+m4 <- Arima(train, order = c(5,0,0))
+
+# Dengan Fourier
+xr <- fourier(train, K = 3)
+f1 <- Arima(train, order = c(1,0,2), xreg = xr)
+f2 <- Arima(train, order = c(2,0,1), xreg = xr)
+f3 <- Arima(train, order = c(2,0,2), xreg = xr)
+f4 <- auto.arima(train, xreg = xr, seasonal = FALSE)
+
+# Bandingkan AIC
+sapply(list(m1,m2,m3,m4,f1,f2,f3,f4), AIC)
+
+checkresiduals(f4)
+```
+```{r}
+xr_test <- forecast::fourier(train, K = 3, h = length(test))
+
+fc3 <- forecast::forecast(f3, xreg = xr_test)
+fc4 <- forecast::forecast(f4, xreg = xr_test)
+
+forecast::accuracy(fc3, test)
+forecast::accuracy(fc4, test)
+```
+Kesimpulan: pilih f3, ARIMA(2,0,2) + Fourier (K = 3).
+
+Semua ukuran error di data test lebih kecil dibanding f4, walau selisihnya tipis.
+AIC-nya juga paling kecil (13422.88).
+d = 0 
+```{r}
+checkresiduals(f3)
+```
+# Peramalan 
+```{r}
+fc3 <- forecast::forecast(f3, xreg = xr_test)
+plot(fc3)
+lines(test, col = "red")
+```
+
+
+
+
+
+
+
+
+
+
+
+
